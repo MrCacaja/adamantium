@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3 uid="uid://kq0y0skr0g0i"]
+
+[ext_resource type="Script" path="res://scripts/server.gd" id="2_mldvy"]
+
+[node name="Game" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.936617, 0.350354, 0, -0.350354, 0.936617, 0, 6.43512, 15.052)
+current = true
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.85474, 0.519057, 0, -0.519057, 0.85474, -0.483631, 10.1938, 15.0819)
+
+[node name="Server" type="Node" parent="."]
+script = ExtResource("2_mldvy")
