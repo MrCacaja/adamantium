@@ -2,5 +2,10 @@ extends Node
 
 enum Action {
 	Spawn,
-	Destroy
+	Destroy,
+	SendState
+}
+
+const ModelObjs = {
+	"player": preload("res://scenes/player.tscn")
 }

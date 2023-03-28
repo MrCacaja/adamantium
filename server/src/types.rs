@@ -7,7 +7,8 @@ use tokio::sync::Mutex;
 use tokio_tungstenite::WebSocketStream;
 
 pub type ObjectId = String;
-pub type OwnerId = String;
+pub type PeerId = String;
+pub type ObjectIdCounter = Arc<Mutex<u16>>;
 
 #[derive(Serialize, Deserialize)]
 pub enum ObjectModel {
@@ -16,20 +17,25 @@ pub enum ObjectModel {
 
 #[derive(Serialize, Deserialize)]
 pub struct Object {
+    id: ObjectId,
     model: ObjectModel,
-    owner_id: OwnerId,
+    owner: SocketAddr,
     transform: Transform,
 }
 
 impl Object {
-    pub fn new(owner_id: OwnerId, model: ObjectModel) -> Self {
-        Self {transform: Transform::new(0, 0, 0), owner_id, model}
+    pub fn new(id: ObjectId, owner: SocketAddr, model: ObjectModel) -> Self {
+        Self {transform: Transform::new(0, 0, 0), owner, model, id}
     }
 
     pub fn set_pos(&mut self, x: i16, y: i16, z: i16) {
         self.transform.position.x = x;
         self.transform.position.y = y;
         self.transform.position.z = z;
+    }
+
+    pub fn get_owner(&self) -> &SocketAddr {
+        &self.owner
     }
 }
 
