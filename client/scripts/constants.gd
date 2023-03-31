@@ -3,7 +3,8 @@ extends Node
 enum Action {
 	Spawn,
 	Destroy,
-	SendState
+	SendState,
+	Update
 }
 
 const ModelObjs = {

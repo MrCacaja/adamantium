@@ -18,6 +18,9 @@ func state_to_instance(state: Dictionary, instance: Node):
 						)
 
 func load_game_state(res: String):
+	for n in get_children():
+		remove_child(n)
+		n.queue_free()
 	var GAME_STATE = JSON.parse_string(res)
 	for key in GAME_STATE:
 		spawn(JSON.stringify(GAME_STATE[key]))
@@ -30,6 +33,13 @@ func spawn(res: String):
 	var obj_instance = Constants.ModelObjs[obj_state.model.to_lower()].instantiate()
 	state_to_instance(obj_state, obj_instance)
 	add_child(obj_instance)
+
+func update_obj(res: String):
+	var obj_state = JSON.parse_string(res)
+	var obj_instance = get_node(obj_state.id)
+	if !obj_instance:
+		printerr("Could not find node with ID " + obj_state.id)
+	state_to_instance(obj_state, obj_instance)
 
 func _ready():
 	socket.connect_to_url(websocket_url)
@@ -50,6 +60,7 @@ func _process(delta):
 				Constants.Action.Spawn: spawn(res)
 				Constants.Action.SendState: load_game_state(res)
 				Constants.Action.Destroy: delete_obj(res)
+				Constants.Action.Update: update_obj(res)
 
 	elif state == WebSocketPeer.STATE_CLOSING:
 		# Keep polling to achieve proper close.
