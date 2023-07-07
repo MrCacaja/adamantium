@@ -30,9 +30,11 @@ pub async fn process_peer_input(peer: SocketAddr, msg: Message) {
         );
         return;
     }
+    //it's very important to call the actions below with new threads, as the peer mutex will probably
+    //cause a deadlock when sending the events back
     if message.input_type == InputType::Move {
         let direction = Direction::iter().nth(message.args.parse::<usize>().unwrap()).unwrap();
-        move_player_obj(message.actor_id, direction).await;
+        tokio::spawn(move_player_obj(message.actor_id, direction));
     }
 }
 

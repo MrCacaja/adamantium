@@ -125,7 +125,7 @@ pub async fn move_player_obj(actor_id: ObjectId, direction: Direction) {
         obj.transform.position.x += 1;
     }
 
-    tokio::spawn(send_update_obj_event(serde_json::to_string(obj).unwrap()));
+    send_update_obj_event(serde_json::to_string(obj).unwrap()).await.unwrap();
 }
 
 pub type GameState = Arc<Mutex<HashMap<ObjectId, Object>>>;
