@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 use serde::Deserialize;
 use strum::IntoEnumIterator;
 use strum_macros::{Display};
-use tungstenite::Message;
+use tokio_tungstenite::tungstenite::Message;
 use crate::log::{Log, LogLevel};
 use crate::objects::{Direction, get_player_obj_ids, move_obj, ObjectId};
 

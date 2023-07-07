@@ -145,7 +145,7 @@ impl Transform {
 
 pub async fn move_obj(obj_id: ObjectId, direction: Direction) {
     let mut game_state = GAME_STATE.lock().await;
-    let mut obj = game_state.get_mut(&*obj_id).unwrap();
+    let obj = game_state.get_mut(&*obj_id).unwrap();
     if direction == Direction::NORTH {
         obj.sum_z(-1).await;
     }
