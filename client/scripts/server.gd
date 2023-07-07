@@ -2,8 +2,12 @@ extends Node
 
 @export var websocket_url = "127.0.0.1:9002"
 
+const max_tick_secs = 0.2
+
 var socket = WebSocketPeer.new()
 var first_poll = true
+var message_list = []
+var tick_secs = max_tick_secs
 
 func state_to_instance(state: Dictionary, instance: Node):
 	for key in state:
@@ -45,12 +49,17 @@ func _ready():
 	socket.connect_to_url(websocket_url)
 
 func _process(delta):
+	tick_secs -= delta;
 	socket.poll()
 	var state = socket.get_ready_state()
 	if state == WebSocketPeer.STATE_OPEN:
-		socket.send(PackedByteArray())
+		var message = message_list.pop_front();
+		if (message && tick_secs <= 0):
+			socket.send_text(message);
+			tick_secs = max_tick_secs
+		else: socket.send(PackedByteArray())
 		if first_poll :
-			var player_id = socket.get_packet().get_string_from_ascii()
+			Globals.player_id = socket.get_packet().get_string_from_ascii()
 			first_poll = false
 		while socket.get_available_packet_count():
 			var res = socket.get_packet().get_string_from_ascii()
@@ -70,3 +79,12 @@ func _process(delta):
 		var reason = socket.get_close_reason()
 		print("WebSocket closed with code: %d, reason %s. Clean: %s" % [code, reason, code != -1])
 		set_process(false) # Stop processing.
+
+func send_data(message: String):
+	var msg_json = JSON.parse_string(message);
+	for i in message_list:
+		var msg = JSON.parse_string(i);
+		if msg.input_type == msg_json.input_type:
+			msg.args = msg_json.args;
+			return;
+	message_list.push_back(message);

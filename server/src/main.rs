@@ -2,6 +2,7 @@ mod log;
 mod event;
 mod objects;
 mod state;
+mod peer_input;
 
 use futures_util::{StreamExt};
 use tokio::sync::{Mutex};
@@ -13,29 +14,18 @@ use rand::random;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::{accept_async, tungstenite::Error};
 use tungstenite::Result;
-use crate::event::{remove_from_game, send_game_state, send_simple_message};
+use crate::event::{send_game_state, send_simple_message};
 use crate::log::{Log, LogLevel};
 use crate::state::{create_obj_id, GAME_STATE, PEER_MAP};
-use crate::objects::{ObjectModel};
+use crate::objects::{ObjectModel, remove_player};
+use crate::peer_input::{process_peer_input};
 
 async fn accept_connection(peer: SocketAddr, stream: TcpStream) {
     if let Err(e) = handle_connection(peer, stream).await {
         match e {
             Error::ConnectionClosed | Error::Protocol(_) | Error::Utf8 => {
                 Log::new(LogLevel::Info, peer.clone().ip().to_string() + " disconnected");
-                let mut peer_map = PEER_MAP.lock().await;
-                let game_state = GAME_STATE.lock().await;
-                let player_objs: Vec<String> = game_state.iter()
-                    .filter(|(_, value)| value.get_owner().to_string() == peer.to_string())
-                    .map(|(id, _)| id.to_string())
-                    .collect::<Vec<String>>().try_into().unwrap();
-                peer_map.remove(&peer);
-                drop(game_state);
-                drop(peer_map);
-
-                for id in player_objs.clone() {
-                    remove_from_game(id).await.unwrap();
-                }
+                remove_player(peer).await;
             },
             err => { Log::new_error(err); }
         };
@@ -51,8 +41,8 @@ async fn handle_connection(peer: SocketAddr, stream: TcpStream) -> Result<(), Er
 
     while let Some(msg) = ws_stream.lock().await.next().await {
         let msg = msg?;
-        if msg.is_text() || msg.is_binary() {
-
+        if (msg.is_text() || msg.is_binary()) && !msg.to_string().is_empty() {
+            process_peer_input(peer, msg).await;
         }
     }
 
@@ -65,7 +55,7 @@ async fn authenticate_peer(peer: SocketAddr) -> Result<(), Error> {
     send_simple_message(peer, id.clone()).await.unwrap();
     Object::new_with_id(id.clone(), peer, ObjectModel::Player).await;
     let mut game_state = GAME_STATE.lock().await;
-    game_state.get_mut(&*id).unwrap().set_pos(rng, rng, rng).await;
+    game_state.get_mut(&*id).unwrap().set_pos(rng, 1, rng).await;
     drop(game_state);
     send_game_state(peer).await.unwrap();
 

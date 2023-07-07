@@ -4,7 +4,8 @@ use tokio_tungstenite::tungstenite::Error;
 pub enum LogLevel {
     Info,
     Debug,
-    Error
+    Error,
+    Suspect
 }
 
 impl Display for LogLevel {
@@ -13,6 +14,7 @@ impl Display for LogLevel {
             LogLevel::Error => write!(f, "error"),
             LogLevel::Debug => write!(f, "debug"),
             LogLevel::Info => write!(f, "info"),
+            LogLevel::Suspect => write!(f, "suspect")
         }
     }
 }
