@@ -19,10 +19,10 @@ pub enum ObjectModel {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Object {
-    pub id: ObjectId,
-    pub model: ObjectModel,
-    pub owner: SocketAddr,
-    pub transform: Transform,
+    id: ObjectId,
+    model: ObjectModel,
+    owner: SocketAddr,
+    transform: Transform,
 }
 
 pub async fn get_player_obj_ids(peer: SocketAddr) -> Vec<String> {
@@ -55,10 +55,44 @@ impl Object {
         new_obj_with_id(id, owner, model).await
     }
 
-    pub async fn set_pos(&mut self, x: i16, y: i16, z: i16) {
+    pub async fn set_pos(&mut self, pos: Position) {
+        self.transform.position = pos;
+
+        send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
+    }
+    
+    pub async fn set_x(&mut self, x: i16) {
         self.transform.position.x = x;
+
+        send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
+    }
+
+    pub async fn set_y(&mut self, y: i16) {
         self.transform.position.y = y;
+
+        send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
+    }
+
+    pub async fn set_z(&mut self, z: i16) {
         self.transform.position.z = z;
+
+        send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
+    }
+
+    pub async fn sum_x(&mut self, x: i16) {
+        self.transform.position.x += x;
+
+        send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
+    }
+
+    pub async fn sum_y(&mut self, y: i16) {
+        self.transform.position.y += y;
+
+        send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
+    }
+
+    pub async fn sum_z(&mut self, z: i16) {
+        self.transform.position.z += z;
 
         send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
     }
@@ -75,9 +109,9 @@ impl Object {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Position {
-    pub x: i16,
-    pub y: i16,
-    pub z: i16
+    x: i16,
+    y: i16,
+    z: i16
 }
 
 impl Position {
@@ -88,7 +122,7 @@ impl Position {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Transform {
-    pub position: Position
+    position: Position
 }
 
 #[derive(EnumIter, PartialEq)]
@@ -109,23 +143,21 @@ impl Transform {
     }
 }
 
-pub async fn move_player_obj(actor_id: ObjectId, direction: Direction) {
+pub async fn move_obj(obj_id: ObjectId, direction: Direction) {
     let mut game_state = GAME_STATE.lock().await;
-    let mut obj = game_state.get_mut(&*actor_id).unwrap();
+    let mut obj = game_state.get_mut(&*obj_id).unwrap();
     if direction == Direction::NORTH {
-        obj.transform.position.z -= 1;
+        obj.sum_z(-1).await;
     }
     if direction == Direction::WEST  {
-        obj.transform.position.x -= 1;
+        obj.sum_x(-1).await;
     }
     if direction == Direction::SOUTH  {
-        obj.transform.position.z += 1;
+        obj.sum_z(1).await;
     }
     if direction == Direction::EAST  {
-        obj.transform.position.x += 1;
+        obj.sum_x(1).await;
     }
-
-    send_update_obj_event(serde_json::to_string(obj).unwrap()).await.unwrap();
 }
 
 pub type GameState = Arc<Mutex<HashMap<ObjectId, Object>>>;

@@ -17,7 +17,7 @@ use tungstenite::Result;
 use crate::event::{send_game_state, send_simple_message};
 use crate::log::{Log, LogLevel};
 use crate::state::{create_obj_id, GAME_STATE, PEER_MAP};
-use crate::objects::{ObjectModel, remove_player};
+use crate::objects::{ObjectModel, Position, remove_player};
 use crate::peer_input::{process_peer_input};
 
 async fn accept_connection(peer: SocketAddr, stream: TcpStream) {
@@ -55,7 +55,7 @@ async fn authenticate_peer(peer: SocketAddr) -> Result<(), Error> {
     send_simple_message(peer, id.clone()).await.unwrap();
     Object::new_with_id(id.clone(), peer, ObjectModel::Player).await;
     let mut game_state = GAME_STATE.lock().await;
-    game_state.get_mut(&*id).unwrap().set_pos(rng, 1, rng).await;
+    game_state.get_mut(&*id).unwrap().set_pos(Position::new(rng, 1, rng)).await;
     drop(game_state);
     send_game_state(peer).await.unwrap();
 

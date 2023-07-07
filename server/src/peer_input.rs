@@ -1,21 +1,21 @@
 use std::net::SocketAddr;
 use serde::Deserialize;
 use strum::IntoEnumIterator;
-use strum_macros::ToString;
+use strum_macros::{Display};
 use tungstenite::Message;
 use crate::log::{Log, LogLevel};
-use crate::objects::{Direction, get_player_obj_ids, move_player_obj, ObjectId};
+use crate::objects::{Direction, get_player_obj_ids, move_obj, ObjectId};
 
-#[derive(Deserialize, PartialEq, ToString)]
+#[derive(Deserialize, PartialEq, Display)]
 pub enum InputType {
     Move,
 }
 
 #[derive(Deserialize)]
 pub struct PeerInput {
-    pub input_type: InputType,
-    pub args: String,
-    pub actor_id: ObjectId
+    input_type: InputType,
+    args: String,
+    actor_id: ObjectId
 }
 
 pub async fn process_peer_input(peer: SocketAddr, msg: Message) {
@@ -34,7 +34,7 @@ pub async fn process_peer_input(peer: SocketAddr, msg: Message) {
     //cause a deadlock when sending the events back
     if message.input_type == InputType::Move {
         let direction = Direction::iter().nth(message.args.parse::<usize>().unwrap()).unwrap();
-        tokio::spawn(move_player_obj(message.actor_id, direction));
+        tokio::spawn(move_obj(message.actor_id, direction));
     }
 }
 
