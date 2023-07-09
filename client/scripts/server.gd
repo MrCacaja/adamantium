@@ -2,12 +2,10 @@ extends Node
 
 @export var websocket_url = "127.0.0.1:9002"
 
-const max_tick_secs = 0.2
-
 var socket = WebSocketPeer.new()
 var first_poll = true
 var message_list = []
-var tick_secs = max_tick_secs
+var tick_secs = Constants.TICK_RATE_SECS
 
 func state_to_instance(state: Dictionary, instance: Node):
 	for key in state:
@@ -17,9 +15,14 @@ func state_to_instance(state: Dictionary, instance: Node):
 			_:
 				if instance.get(key) != null:
 					match key:
-						'transform': instance.position = Vector3(
-							value.position.x, value.position.y, value.position.z
-						)
+						'transform': 
+							if instance.action.get('in_progress') == true:
+								return
+							instance.position = Vector3(
+								value.position.x, value.position.y, value.position.z
+							)
+						'action':
+							instance.change_action(value.movement, value.ticks, value.locked)
 
 func load_game_state(res: String):
 	for n in get_children():
@@ -56,7 +59,7 @@ func _process(delta):
 		var message = message_list.pop_front();
 		if (message && tick_secs <= 0):
 			socket.send_text(message);
-			tick_secs = max_tick_secs
+			tick_secs = Constants.TICK_RATE_SECS
 		else: socket.send(PackedByteArray())
 		if first_poll :
 			Globals.player_id = socket.get_packet().get_string_from_ascii()

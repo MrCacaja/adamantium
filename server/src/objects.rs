@@ -1,16 +1,88 @@
 use std::collections::HashMap;
+use std::fmt::Error;
 use std::net::SocketAddr;
 use std::sync::{Arc};
-use serde::{Deserialize, Serialize};
+use std::thread::sleep;
+use std::time::{Duration};
+use serde::{Deserialize, Serialize, Serializer};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 use tokio_tungstenite::WebSocketStream;
 use crate::{create_obj_id};
 use crate::event::{add_to_game, remove_from_game, send_update_obj_event};
-use crate::state::{GAME_STATE, PEER_MAP};
+use crate::state::{GAME_STATE, PEER_MAP, TICK_RATE_SECS};
 use strum_macros::EnumIter;
 
 pub type ObjectId = String;
+
+
+#[derive(EnumIter, Deserialize, Clone)]
+pub enum Movement {
+    Idle,
+    WalkNorth,
+    WalkWest,
+    WalkSouth,
+    WalkEast,
+    WalkNorthwest,
+    WalkNortheast,
+    WalkSouthwest,
+    WalkSoutheast,
+}
+
+impl Serialize for Movement {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        let num = match &self {
+            Movement::Idle => 0,
+            Movement::WalkNorth => 1,
+            Movement::WalkWest => 2,
+            Movement::WalkSouth => 3,
+            Movement::WalkEast => 4,
+            Movement::WalkNorthwest => 5,
+            Movement::WalkNortheast => 6,
+            Movement::WalkSouthwest => 7,
+            Movement::WalkSoutheast => 8,
+        };
+        serializer.serialize_i32(num)
+    }
+}
+
+impl Movement {
+    fn to_direction(self) -> Result<Direction, Error> {
+        match self {
+            Movement::WalkNorth => Ok(Direction::North),
+            Movement::WalkWest => Ok(Direction::West),
+            Movement::WalkSouth => Ok(Direction::South),
+            Movement::WalkEast => Ok(Direction::East),
+            Movement::WalkNorthwest => Ok(Direction::Northwest),
+            Movement::WalkNortheast => Ok(Direction::Northeast),
+            Movement::WalkSouthwest => Ok(Direction::Southwest),
+            Movement::WalkSoutheast => Ok(Direction::Southeast),
+            _ => Err(Error)
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Progress {
+    movement: Movement,
+    ticks: u16,
+    locked: bool,
+    done: bool
+}
+
+impl Progress {
+    fn new(movement: Movement, ticks: u16, locked: bool) -> Self {
+        Progress {movement, locked, ticks, done: false}
+    }
+
+    fn new_idle() -> Self {
+        Progress {movement: Movement::Idle, locked: false, ticks: 0, done: true}
+    }
+
+    fn wait_ticks(&self) {
+        sleep(Duration::new((TICK_RATE_SECS as u16 * self.ticks) as u64, 0));
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub enum ObjectModel {
@@ -23,6 +95,7 @@ pub struct Object {
     model: ObjectModel,
     owner: SocketAddr,
     transform: Transform,
+    action: Progress
 }
 
 pub async fn get_player_obj_ids(peer: SocketAddr) -> Vec<String> {
@@ -41,7 +114,11 @@ pub async fn remove_player(peer: SocketAddr) {
 }
 
 async fn new_obj_with_id(id: ObjectId, owner: SocketAddr, model: ObjectModel) -> ObjectId {
-    let obj = Object {transform: Transform::new(0, 0, 0), owner, model, id: id.clone()};
+    let obj = Object {
+        transform: Transform::new(0, 0, 0),
+        owner, model, id: id.clone(),
+        action: Progress::new_idle()
+    };
     add_to_game(obj).await.unwrap();
     id
 }
@@ -55,46 +132,61 @@ impl Object {
         new_obj_with_id(id, owner, model).await
     }
 
-    pub async fn set_pos(&mut self, pos: Position) {
-        self.transform.position = pos;
-
+    pub async fn update(&self) {
         send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
     }
-    
+
+    pub async fn set_pos(&mut self, pos: Position) {
+        self.transform.position = pos;
+        self.update().await;
+    }
+
     pub async fn set_x(&mut self, x: i16) {
         self.transform.position.x = x;
-
-        send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
+        self.update().await;
     }
 
     pub async fn set_y(&mut self, y: i16) {
         self.transform.position.y = y;
-
-        send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
+        self.update().await;
     }
 
     pub async fn set_z(&mut self, z: i16) {
         self.transform.position.z = z;
-
-        send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
+        self.update().await;
     }
 
     pub async fn sum_x(&mut self, x: i16) {
         self.transform.position.x += x;
-
-        send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
+        self.update().await;
     }
 
     pub async fn sum_y(&mut self, y: i16) {
         self.transform.position.y += y;
-
-        send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
+        self.update().await;
     }
 
     pub async fn sum_z(&mut self, z: i16) {
         self.transform.position.z += z;
+        self.update().await;
+    }
 
-        send_update_obj_event(serde_json::to_string(self).unwrap()).await.unwrap();
+    pub async fn act(&mut self, movement: Movement, ticks: u16, locked: bool) {
+        self.action = Progress::new(movement, ticks, locked);
+        self.update().await;
+    }
+
+    pub async fn wait(&mut self) {
+        if self.action.done {return;}
+
+        self.action.wait_ticks();
+        self.action.movement = Movement::Idle;
+        self.update().await;
+    }
+
+    pub async fn act_and_wait(&mut self, movement: Movement, ticks: u16, locked: bool) {
+        self.act(movement, ticks, locked).await;
+        self.wait().await;
     }
 
     pub fn get_owner(&self) -> &SocketAddr {
@@ -125,16 +217,31 @@ pub struct Transform {
     position: Position
 }
 
-#[derive(EnumIter, PartialEq)]
+#[derive(EnumIter, PartialEq, Clone)]
 pub enum Direction {
-    NORTH,
-    WEST,
-    SOUTH,
-    EAST,
-    NORTHWEST,
-    NORTHEAST,
-    SOUTHWEST,
-    SOUTHEAST
+    North,
+    West,
+    South,
+    East,
+    Northwest,
+    Northeast,
+    Southwest,
+    Southeast
+}
+
+impl Direction {
+    fn to_movement(&self) -> Movement {
+        match self {
+            Direction::North => Movement::WalkNorth,
+            Direction::West => Movement::WalkWest,
+            Direction::South => Movement::WalkSouth,
+            Direction::East => Movement::WalkEast,
+            Direction::Northwest => Movement::WalkNorthwest,
+            Direction::Northeast => Movement::WalkNortheast,
+            Direction::Southwest => Movement::WalkSouthwest,
+            Direction::Southeast => Movement::WalkSoutheast,
+        }
+    }
 }
 
 impl Transform {
@@ -143,21 +250,32 @@ impl Transform {
     }
 }
 
+async fn raw_move_obj(obj: &mut Object, direction: Direction) {
+    if direction == Direction::North {
+        obj.sum_z(-1).await;
+    }
+    if direction == Direction::West  {
+        obj.sum_x(-1).await;
+    }
+    if direction == Direction::South  {
+        obj.sum_z(1).await;
+    }
+    if direction == Direction::East  {
+        obj.sum_x(1).await;
+    }
+}
+
 pub async fn move_obj(obj_id: ObjectId, direction: Direction) {
     let mut game_state = GAME_STATE.lock().await;
     let obj = game_state.get_mut(&*obj_id).unwrap();
-    if direction == Direction::NORTH {
-        obj.sum_z(-1).await;
-    }
-    if direction == Direction::WEST  {
-        obj.sum_x(-1).await;
-    }
-    if direction == Direction::SOUTH  {
-        obj.sum_z(1).await;
-    }
-    if direction == Direction::EAST  {
-        obj.sum_x(1).await;
-    }
+    raw_move_obj(obj, direction).await;
+}
+
+pub async fn slide_obj(obj_id: ObjectId, direction: Direction) {
+    let mut game_state = GAME_STATE.lock().await;
+    let obj = game_state.get_mut(&*obj_id).unwrap();
+    obj.act_and_wait(direction.to_movement(), 1, false).await;
+    raw_move_obj(obj, direction).await;
 }
 
 pub type GameState = Arc<Mutex<HashMap<ObjectId, Object>>>;

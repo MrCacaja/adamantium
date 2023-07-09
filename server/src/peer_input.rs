@@ -4,7 +4,7 @@ use strum::IntoEnumIterator;
 use strum_macros::{Display};
 use tokio_tungstenite::tungstenite::Message;
 use crate::log::{Log, LogLevel};
-use crate::objects::{Direction, get_player_obj_ids, move_obj, ObjectId};
+use crate::objects::{Direction, get_player_obj_ids, ObjectId, slide_obj};
 
 #[derive(Deserialize, PartialEq, Display)]
 pub enum InputType {
@@ -34,7 +34,7 @@ pub async fn process_peer_input(peer: SocketAddr, msg: Message) {
     //cause a deadlock when sending the events back
     if message.input_type == InputType::Move {
         let direction = Direction::iter().nth(message.args.parse::<usize>().unwrap()).unwrap();
-        tokio::spawn(move_obj(message.actor_id, direction));
+        tokio::spawn(slide_obj(message.actor_id, direction));
     }
 }
 

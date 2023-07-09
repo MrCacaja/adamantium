@@ -15,3 +15,6 @@ pub static ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 pub fn create_obj_id() -> String {
     ID_COUNTER.fetch_add(1, Ordering::Relaxed).to_string()
 }
+
+//those shall be the same in the client code:
+pub static TICK_RATE_SECS: f32 = 0.2;
