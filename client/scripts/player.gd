@@ -31,18 +31,35 @@ func tween_walk(direction, ticks):
 	tween.tween_property(self, "position", direction, ticks * Constants.TICK_RATE_SECS).set_trans(Tween.TRANS_LINEAR)
 	tween.tween_callback(change_to_idle)
 
-func _physics_process(delta):
+func _process(delta):
 	var actor_id = Globals.player_id;
 	var message = {"input_type": "Move", "actor_id": actor_id};
+	var cam_rotation = $CameraHolder.global_rotation_degrees.y;
+	
+	var cam_direction = 0
+	if cam_rotation >= -45 && cam_rotation <= 45:
+		cam_direction = 0
+	elif cam_rotation >= -135 && cam_rotation < -45:
+		cam_direction = 3
+	elif cam_rotation > 45 && cam_rotation < 135:
+		cam_direction = 1
+	else:
+		cam_direction = 2
+
 	if Input.is_action_pressed("forward"):
-		message.args = "0";
+		message.args = str(cam_direction)
 		Server.send_data(JSON.stringify(message))
+
 	if Input.is_action_pressed("left"):
-		message.args = "1";
-		Server.send_data(JSON.stringify(message))
+		message.args = str((cam_direction + 1) % 4)
+
 	if Input.is_action_pressed("back"):
-		message.args = "2";
+		message.args = str((cam_direction + 2) % 4)
 		Server.send_data(JSON.stringify(message))
+
 	if Input.is_action_pressed("right"):
-		message.args = "3";
+		message.args = str((cam_direction + 3) % 4)
+		Server.send_data(JSON.stringify(message))
+
+	if message.has("args"):
 		Server.send_data(JSON.stringify(message))

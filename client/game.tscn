@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://kq0y0skr0g0i"]
+[gd_scene load_steps=2 format=3 uid="uid://b6emr1w1n173t"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8e5c5"]
 metallic = 0.72
@@ -6,11 +6,6 @@ metallic_specular = 0.78
 metallic_texture_channel = 1
 
 [node name="Game" type="Node3D"]
-
-[node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.552912, 0.83324, 0, -0.83324, 0.552912, 0.12, 5, 15.052)
-current = true
-fov = 102.685
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.85474, 0.519057, 0, -0.519057, 0.85474, -0.483631, 10.1938, 15.0819)
