@@ -1,21 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://kq0y0skr0g0i"]
+[gd_scene format=3 uid="uid://kq0y0skr0g0i"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8e5c5"]
-metallic = 0.72
-metallic_specular = 0.78
-metallic_texture_channel = 1
+[ext_resource type="Script" uid="uid://c5ws85qfg06ga" path="res://scripts/camera_controller.gd" id="1"]
 
-[node name="Game" type="Node3D"]
+[node name="Game" type="Node2D" unique_id=969564891]
 
-[node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.552912, 0.83324, 0, -0.83324, 0.552912, 0.12, 5, 15.052)
-current = true
-fov = 102.685
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.85474, 0.519057, 0, -0.519057, 0.85474, -0.483631, 10.1938, 15.0819)
-
-[node name="CSGBox3D" type="CSGBox3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.05659, -0.479054, 7.84661)
-size = Vector3(50, 1, 50)
-material = SubResource("StandardMaterial3D_8e5c5")
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1531528072]
+script = ExtResource("1")

@@ -1,27 +1,64 @@
 extends Node
 
 enum Action {
-	Spawn,
-	Destroy,
-	SendState,
-	Update
+	SyncEntity,
+	SyncId
 }
 
 enum Movement {
 	Idle,
-	WalkNorth,
-	WalkWest,
-	WalkSouth,
-	WalkEast,
-	WalkNorthwest,
-	WalkNortheast,
-	WalkSouthwest,
-	WalkSoutheast,
+	Walk
 }
 
-const ModelObjs = {
-	"player": preload("res://scenes/player.tscn")
+enum Direction {
+	Down,
+	Left,
+	Right,
+	Up
 }
 
-#those shall be the same in the server code:
-const TICK_RATE_SECS = 0.2;
+const SPRITES_CONFIGS = {
+	"human": {
+		"frame_size": Vector2i(32, 32),
+		"padding": 16,
+		"animations": {
+			"idle": {
+				"down": {
+					"sheet": "sprites/Entities/Characters/Body_A/Animations/Idle_Base/Idle_Down-Sheet.png",
+					"frames": 4,
+					"speed": 1.0
+				},
+				"side": {
+					"sheet": "sprites/Entities/Characters/Body_A/Animations/Idle_Base/Idle_Side-Sheet.png",
+					"frames": 4,
+					"speed": 1.0
+				},
+				"up": {
+					"sheet": "sprites/Entities/Characters/Body_A/Animations/Idle_Base/Idle_Up-Sheet.png",
+					"frames": 4,
+					"speed": 1.0
+				}
+			},
+			"walk": {
+				"down": {
+					"sheet": "sprites/Entities/Characters/Body_A/Animations/Walk_Base/Walk_Down-Sheet.png",
+					"frames": 6,
+					"speed": 1.0
+				},
+				"side": {
+					"sheet": "sprites/Entities/Characters/Body_A/Animations/Walk_Base/Walk_Side-Sheet.png",
+					"frames": 6,
+					"speed": 1.0
+				},
+				"up": {
+					"sheet": "sprites/Entities/Characters/Body_A/Animations/Walk_Base/Walk_Up-Sheet.png",
+					"frames": 6,
+					"speed": 1.0
+				}
+			}
+		}
+	}
+}
+
+const TICK_RATE_SECS = 0.2
+const INTERP_DURATION = 0.08

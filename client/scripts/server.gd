@@ -1,4 +1,4 @@
-extends Node
+extends Node2D
 
 @export var websocket_url = "127.0.0.1:9002"
 
@@ -7,87 +7,52 @@ var first_poll = true
 var message_list = []
 var tick_secs = Constants.TICK_RATE_SECS
 
-func state_to_instance(state: Dictionary, instance: Node):
-	for key in state:
-		var value = state[key]
-		match key:
-			'id': instance.set_name(value)
-			_:
-				if instance.get(key) != null:
-					match key:
-						'transform': 
-							if instance.action.get('in_progress') == true:
-								return
-							instance.position = Vector3(
-								value.position.x, value.position.y, value.position.z
-							)
-						'action':
-							instance.change_action(value.movement, value.ticks, value.locked)
+func sync_entity(res: String) -> void:
+	var state = JSON.parse_string(res)
+	var entity = get_node_or_null(String.num_uint64(state.id))
+	var spawned = !entity
+	if spawned:
+		entity = preload("res://scripts/entity.gd").new()
+	entity.apply_state(state)
+	if spawned:
+		add_child(entity)
 
-func load_game_state(res: String):
-	for n in get_children():
-		remove_child(n)
-		n.queue_free()
-	var GAME_STATE = JSON.parse_string(res)
-	for key in GAME_STATE:
-		spawn(JSON.stringify(GAME_STATE[key]))
-
-func delete_obj(id: String):
+func delete_obj(id: String) -> void:
 	remove_child(get_node(id))
 
-func spawn(res: String):
-	var obj_state = JSON.parse_string(res)
-	var obj_instance = Constants.ModelObjs[obj_state.model.to_lower()].instantiate()
-	state_to_instance(obj_state, obj_instance)
-	add_child(obj_instance)
-
-func update_obj(res: String):
-	var obj_state = JSON.parse_string(res)
-	var obj_instance = get_node(obj_state.id)
-	if !obj_instance:
-		printerr("Could not find node with ID " + obj_state.id)
-	state_to_instance(obj_state, obj_instance)
-
-func _ready():
+func _ready() -> void:
+	y_sort_enabled = true
 	socket.connect_to_url(websocket_url)
 
-func _process(delta):
-	tick_secs -= delta;
+func _process(delta: float) -> void:
+	tick_secs -= delta
 	socket.poll()
 	var state = socket.get_ready_state()
 	if state == WebSocketPeer.STATE_OPEN:
-		var message = message_list.pop_front();
-		if (message && tick_secs <= 0):
-			socket.send_text(message);
+		if message_list.size() > 0 and tick_secs <= 0:
+			socket.send_text(message_list.pop_front())
 			tick_secs = Constants.TICK_RATE_SECS
-		else: socket.send(PackedByteArray())
-		if first_poll :
-			Globals.player_id = socket.get_packet().get_string_from_ascii()
-			first_poll = false
 		while socket.get_available_packet_count():
 			var res = socket.get_packet().get_string_from_ascii()
 			var event = int(res[0])
 			res = res.right(res.length() - 1)
 			match event:
-				Constants.Action.Spawn: spawn(res)
-				Constants.Action.SendState: load_game_state(res)
-				Constants.Action.Destroy: delete_obj(res)
-				Constants.Action.Update: update_obj(res)
+				Constants.Action.SyncEntity: sync_entity(res)
+				Constants.Action.SyncId: Globals.player_id = res
 
 	elif state == WebSocketPeer.STATE_CLOSING:
-		# Keep polling to achieve proper close.
 		pass
 	elif state == WebSocketPeer.STATE_CLOSED:
 		var code = socket.get_close_code()
 		var reason = socket.get_close_reason()
 		print("WebSocket closed with code: %d, reason %s. Clean: %s" % [code, reason, code != -1])
-		set_process(false) # Stop processing.
+		set_process(false)
 
-func send_data(message: String):
-	var msg_json = JSON.parse_string(message);
-	for i in message_list:
-		var msg = JSON.parse_string(i);
+func send_data(message: String) -> void:
+	var msg_json = JSON.parse_string(message)
+	for i in range(message_list.size()):
+		var msg = JSON.parse_string(message_list[i])
 		if msg.input_type == msg_json.input_type:
-			msg.args = msg_json.args;
-			return;
-	message_list.push_back(message);
+			message_list[i] = message
+			return
+	message_list.push_back(message)
