@@ -2,7 +2,9 @@ extends Node
 
 enum Action {
 	SyncEntity,
-	SyncId
+	SyncId,
+	Disconnect,
+	Chat
 }
 
 enum Movement {
@@ -62,3 +64,5 @@ const SPRITES_CONFIGS = {
 
 const TICK_RATE_SECS = 0.2
 const INTERP_DURATION = 0.08
+const CHAT_RADIUS = 300.0
+const CHAT_MAX_MESSAGES = 50
