@@ -5,6 +5,7 @@ pub(crate) enum Action {
     SyncEntity,
     SyncId,
     Disconnect,
+    Chat,
 }
 
 impl ToString for Action {
@@ -13,6 +14,7 @@ impl ToString for Action {
             Action::SyncEntity => "0",
             Action::SyncId => "1",
             Action::Disconnect => "2",
+            Action::Chat => "3",
         }
         .parse()
         .unwrap()

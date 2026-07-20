@@ -13,6 +13,7 @@ use crate::ecs::systems::movement_system::MovementSystem;
 use crate::log::{Log, LogLevel};
 use crate::networking::accept_connection;
 use common::events::PeerType;
+use ecs::components::player_name::PlayerName;
 use ecs::components::transform::{Rotation, Scale};
 use ecs::systems::track_system::TrackSystem;
 use futures_util::lock::Mutex;

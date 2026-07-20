@@ -33,12 +33,21 @@ func _process(delta: float) -> void:
 			socket.send_text(message_list.pop_front())
 			tick_secs = Constants.TICK_RATE_SECS
 		while socket.get_available_packet_count():
-			var res = socket.get_packet().get_string_from_ascii()
+			var res = socket.get_packet().get_string_from_utf8()
 			var event = int(res[0])
 			res = res.right(res.length() - 1)
 			match event:
 				Constants.Action.SyncEntity: sync_entity(res)
-				Constants.Action.SyncId: Globals.player_id = res
+				Constants.Action.SyncId:
+					Globals.player_id = res
+					var name_screen = get_tree().root.get_node_or_null("Main/UI/NameScreen")
+					if name_screen:
+						name_screen.show()
+				Constants.Action.Chat:
+					var data = JSON.parse_string(res)
+					var chat_ui = get_tree().root.get_node_or_null("Main/UI/ChatUI")
+					if chat_ui:
+						chat_ui.append_message(data)
 
 	elif state == WebSocketPeer.STATE_CLOSING:
 		pass
@@ -56,3 +65,9 @@ func send_data(message: String) -> void:
 			message_list[i] = message
 			return
 	message_list.push_back(message)
+
+func send_name(player_name: String) -> void:
+	Globals.player_name = player_name
+	Globals.name_set = true
+	var message = {"input_type": "SetName", "actor_id": Globals.player_id, "args": player_name}
+	send_data(JSON.stringify(message))

@@ -10,6 +10,7 @@ use crate::{
         components::{
             delta::EntityDelta,
             id::{NetworkId, Player},
+            player_name::PlayerName,
             sprite::Sprite,
             transform::{AnimState, Direction, Position, Velocity},
         },
@@ -19,6 +20,7 @@ use crate::{
 };
 
 const SPEED: f32 = 50.;
+const CHAT_RADIUS: f32 = 300.0;
 
 #[derive(Deserialize, Debug)]
 struct InputMessage {
@@ -43,6 +45,7 @@ impl<'a> System<'a> for InputSystem {
         WriteStorage<'a, Velocity>,
         WriteStorage<'a, Direction>,
         WriteStorage<'a, AnimState>,
+        WriteStorage<'a, PlayerName>,
     );
 
     fn run(
@@ -60,6 +63,7 @@ impl<'a> System<'a> for InputSystem {
             mut velocities,
             mut directions,
             mut anim_states,
+            mut player_names,
         ): Self::SystemData,
     ) {
         while let Ok(event) = event_receiver.try_recv() {
@@ -79,11 +83,6 @@ impl<'a> System<'a> for InputSystem {
                         }
                     };
 
-                    //temporary check for input type, we will have to handle other input types in the future
-                    if msg.input_type != "Move" {
-                        continue;
-                    }
-
                     let actor_id: u32 = match msg.actor_id.parse() {
                         Ok(id) => id,
                         Err(_) => continue,
@@ -91,34 +90,93 @@ impl<'a> System<'a> for InputSystem {
 
                     let peer_addr = input_event.peer_socket.to_string();
 
-                    // a hashmap lookup would be more efficient here, but for now we will just iterate through the players
-                    for (_ent, player, vel) in (&*entities, &player_ids, &mut velocities).join() {
-                        if player.id == actor_id && player.address == peer_addr {
-                            if msg.args == "stop" {
-                                vel.x = 0.0;
-                                vel.y = 0.0;
-                            } else {
-                                let mut dir = (0.0f32, 0.0f32);
-                                for code in msg.args.split(',') {
-                                    match code.trim() {
-                                        "0" => dir.1 -= 1.0,
-                                        "1" => dir.0 -= 1.0,
-                                        "2" => dir.1 += 1.0,
-                                        "3" => dir.0 += 1.0,
-                                        _ => {}
+                    match msg.input_type.as_str() {
+                        "Move" => {
+                            for (_ent, player, vel) in
+                                (&*entities, &player_ids, &mut velocities).join()
+                            {
+                                if player.id == actor_id && player.address == peer_addr {
+                                    if msg.args == "stop" {
+                                        vel.x = 0.;
+                                        vel.y = 0.;
+                                    } else {
+                                        let mut dir = (0.0f32, 0.0f32);
+                                        for code in msg.args.split(',') {
+                                            match code.trim() {
+                                                "0" => dir.1 -= 1.,
+                                                "1" => dir.0 -= 1.,
+                                                "2" => dir.1 += 1.,
+                                                "3" => dir.0 += 1.,
+                                                _ => {}
+                                            }
+                                        }
+                                        let len = (dir.0 * dir.0 + dir.1 * dir.1).sqrt();
+                                        if len > 0. {
+                                            vel.x = (dir.0 / len) * SPEED;
+                                            vel.y = (dir.1 / len) * SPEED;
+                                        } else {
+                                            vel.x = 0.;
+                                            vel.y = 0.;
+                                        }
                                     }
-                                }
-                                let len = (dir.0 * dir.0 + dir.1 * dir.1).sqrt();
-                                if len > 0.0 {
-                                    vel.x = (dir.0 / len) * SPEED;
-                                    vel.y = (dir.1 / len) * SPEED;
-                                } else {
-                                    vel.x = 0.0;
-                                    vel.y = 0.0;
+                                    break;
                                 }
                             }
-                            break;
                         }
+                        "SetName" => {
+                            for (ent, player) in (&*entities, &player_ids).join() {
+                                if player.id == actor_id && player.address == peer_addr {
+                                    player_names
+                                        .insert(ent, PlayerName(msg.args.clone().to_string()))
+                                        .unwrap();
+                                    break;
+                                }
+                            }
+                        }
+                        "Chat" => {
+                            let mut sender_pos = None;
+                            let mut sender_name = String::new();
+
+                            for (_ent, player, pos, name) in
+                                (&*entities, &player_ids, &positions, &player_names).join()
+                            {
+                                if player.id == actor_id && player.address == peer_addr {
+                                    sender_pos = Some((pos.x, pos.y));
+                                    sender_name = name.0.clone();
+                                    break;
+                                }
+                            }
+
+                            let sender_pos = match sender_pos {
+                                Some(p) => p,
+                                None => continue,
+                            };
+
+                            let chat_payload = serde_json::json!({
+                                "sender": sender_name,
+                                "message": msg.args
+                            })
+                            .to_string();
+                            let mut nearby_ips = Vec::new();
+                            for (_ent, player, pos) in (&*entities, &player_ids, &positions).join()
+                            {
+                                let dx = pos.x - sender_pos.0;
+                                let dy = pos.y - sender_pos.1;
+                                let dist = (dx * dx + dy * dy).sqrt();
+                                if dist <= CHAT_RADIUS {
+                                    nearby_ips.push(player.address.clone());
+                                }
+                            }
+
+                            let _ = output_event_senders.send(Box::new(ServerOutputEvent {
+                                peer_ip: PeerType::Ips(nearby_ips),
+                                message: ActionMessage {
+                                    action: Action::Chat,
+                                    arg: chat_payload.clone(),
+                                },
+                            }));
+                        }
+                        _ => {}
                     }
                 }
                 PeerEvent::Connected(ref connected_event) => {

@@ -6,6 +6,9 @@ func apply(_value) -> void:
 	pass
 
 func _physics_process(_delta: float) -> void:
+	if !Globals.name_set || Globals.chat_open:
+		return
+
 	var actor_id = Globals.player_id
 	var directions := []
 
