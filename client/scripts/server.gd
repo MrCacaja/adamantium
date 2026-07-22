@@ -20,6 +20,18 @@ func sync_entity(res: String) -> void:
 func delete_obj(id: String) -> void:
 	remove_child(get_node(id))
 
+func sync_chunk(res: String) -> void:
+	var data = JSON.parse_string(res)
+	var world_renderer = get_tree().root.get_node_or_null("Main/WorldRenderer")
+	if world_renderer:
+		world_renderer.apply_chunk(data)
+
+func tile_update(res: String) -> void:
+	var data = JSON.parse_string(res)
+	var world_renderer = get_tree().root.get_node_or_null("Main/WorldRenderer")
+	if world_renderer:
+		world_renderer.update_tile(data)
+
 func _ready() -> void:
 	y_sort_enabled = true
 	socket.connect_to_url(websocket_url)
@@ -48,6 +60,8 @@ func _process(delta: float) -> void:
 					var chat_ui = get_tree().root.get_node_or_null("Main/UI/ChatUI")
 					if chat_ui:
 						chat_ui.append_message(data)
+				Constants.Action.SyncChunk: sync_chunk(res)
+				Constants.Action.TileUpdate: tile_update(res)
 
 	elif state == WebSocketPeer.STATE_CLOSING:
 		pass

@@ -6,6 +6,8 @@ pub(crate) enum Action {
     SyncId,
     Disconnect,
     Chat,
+    SyncChunk,
+    TileUpdate,
 }
 
 impl ToString for Action {
@@ -15,6 +17,8 @@ impl ToString for Action {
             Action::SyncId => "1",
             Action::Disconnect => "2",
             Action::Chat => "3",
+            Action::SyncChunk => "4",
+            Action::TileUpdate => "5",
         }
         .parse()
         .unwrap()

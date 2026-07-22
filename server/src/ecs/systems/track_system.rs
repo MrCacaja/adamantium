@@ -11,7 +11,7 @@ use crate::{
         delta::EntityDelta,
         id::{NetworkId, Player},
         sprite::Sprite,
-        transform::{AnimState, Direction, Position, Rotation, Scale, Velocity},
+        transform::{AnimState, Direction, Position, Velocity},
     },
 };
 
@@ -53,8 +53,6 @@ pub(crate) struct TrackSystem {
     reader_velocity: Option<ReaderId<ComponentEvent>>,
     reader_direction: Option<ReaderId<ComponentEvent>>,
     reader_anim_state: Option<ReaderId<ComponentEvent>>,
-    reader_rotation: Option<ReaderId<ComponentEvent>>,
-    reader_scale: Option<ReaderId<ComponentEvent>>,
     reader_network_id: Option<ReaderId<ComponentEvent>>,
     reader_sprite: Option<ReaderId<ComponentEvent>>,
     modified: BitSet,
@@ -70,8 +68,6 @@ impl<'a> System<'a> for TrackSystem {
         ReadStorage<'a, Velocity>,
         ReadStorage<'a, Direction>,
         ReadStorage<'a, AnimState>,
-        ReadStorage<'a, Rotation>,
-        ReadStorage<'a, Scale>,
         ReadStorage<'a, NetworkId>,
         ReadStorage<'a, Sprite>,
     );
@@ -82,8 +78,6 @@ impl<'a> System<'a> for TrackSystem {
         self.reader_velocity = Some(WriteStorage::<Velocity>::fetch(&res).register_reader());
         self.reader_direction = Some(WriteStorage::<Direction>::fetch(&res).register_reader());
         self.reader_anim_state = Some(WriteStorage::<AnimState>::fetch(&res).register_reader());
-        self.reader_rotation = Some(WriteStorage::<Rotation>::fetch(&res).register_reader());
-        self.reader_scale = Some(WriteStorage::<Scale>::fetch(&res).register_reader());
         self.reader_network_id = Some(WriteStorage::<NetworkId>::fetch(&res).register_reader());
         self.reader_sprite = Some(WriteStorage::<Sprite>::fetch(&res).register_reader());
     }
@@ -98,8 +92,6 @@ impl<'a> System<'a> for TrackSystem {
             velocity,
             direction,
             anim_state,
-            rotation,
-            scale,
             network_id,
             sprite,
         ): Self::SystemData,
@@ -113,8 +105,6 @@ impl<'a> System<'a> for TrackSystem {
             velocity => reader_velocity,
             direction => reader_direction,
             anim_state => reader_anim_state,
-            rotation => reader_rotation,
-            scale => reader_scale,
             network_id => reader_network_id,
             sprite => reader_sprite,
         );
@@ -129,8 +119,6 @@ impl<'a> System<'a> for TrackSystem {
                 &velocity,
                 &direction,
                 &anim_state,
-                &rotation,
-                &scale,
                 &network_id,
                 &sprite,
             ) {

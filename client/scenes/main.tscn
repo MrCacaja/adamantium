@@ -2,10 +2,16 @@
 
 [ext_resource type="PackedScene" uid="uid://kq0y0skr0g0i" path="res://scenes/ui/ui.tscn" id="1_0wfyh"]
 [ext_resource type="Script" uid="uid://c5ws85qfg06ga" path="res://scripts/camera_controller.gd" id="2_sugp2"]
+[ext_resource type="Script" uid="uid://dsktiq653eh0t" path="res://scripts/world_renderer.gd" id="3_wrld"]
 
 [node name="Main" type="Node2D" unique_id=1033895276]
+
+[node name="WorldRenderer" type="TileMapLayer" parent="." unique_id=296168132]
+z_index = -1
+script = ExtResource("3_wrld")
 
 [node name="UI" parent="." unique_id=1487564698 instance=ExtResource("1_0wfyh")]
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1781561735]
+zoom = Vector2(2, 2)
 script = ExtResource("2_sugp2")

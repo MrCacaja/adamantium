@@ -4,7 +4,7 @@ use crate::ecs::components::{
     id::NetworkId,
     id::Player,
     sprite::Sprite,
-    transform::{AnimState, Direction, Position, Rotation, Scale, Velocity},
+    transform::{AnimState, Direction, Position, Velocity},
 };
 
 #[derive(Default, Serialize, PartialEq, Clone)]
@@ -27,12 +27,6 @@ pub(crate) struct EntityDelta {
     pub anim_state: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rotation: Option<f32>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scale: Option<(f32, f32)>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub sprite: Option<String>,
 }
 
@@ -44,8 +38,6 @@ impl EntityDelta {
         velocity: &specs::ReadStorage<Velocity>,
         direction: &specs::ReadStorage<Direction>,
         anim_state: &specs::ReadStorage<AnimState>,
-        rotation: &specs::ReadStorage<Rotation>,
-        scale: &specs::ReadStorage<Scale>,
         network_id: &specs::ReadStorage<NetworkId>,
         sprite: &specs::ReadStorage<Sprite>,
     ) -> Option<Self> {
@@ -57,8 +49,6 @@ impl EntityDelta {
             velocity: velocity.get(entity).map(|v| (v.x, v.y)),
             direction: direction.get(entity).map(|d| d.as_str().to_string()),
             anim_state: anim_state.get(entity).map(|a| a.0.clone()),
-            rotation: rotation.get(entity).map(|r| r.angle),
-            scale: scale.get(entity).map(|s| (s.x, s.y)),
             sprite: sprite.get(entity).map(|s| s.0.to_string()),
         })
     }

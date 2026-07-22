@@ -208,6 +208,7 @@ impl<'a> System<'a> for InputSystem {
                         }))
                         .unwrap_or_else(|e| eprintln!("Failed to send output event: {}", e));
 
+                    // TODO: send the entities based on the new player position and the chunk system, not all entities
                     for (ent, net_id) in (&*entities, &network_ids).join() {
                         let delta = EntityDelta {
                             id: net_id.0,
@@ -216,8 +217,6 @@ impl<'a> System<'a> for InputSystem {
                             velocity: velocities.get(ent).map(|v| (v.x, v.y)),
                             direction: directions.get(ent).map(|d| d.as_str().to_string()),
                             anim_state: anim_states.get(ent).map(|a| a.0.clone()),
-                            rotation: None,
-                            scale: None,
                             sprite: sprites.get(ent).map(|s| s.0.to_string()),
                         };
 

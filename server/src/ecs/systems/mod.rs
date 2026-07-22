@@ -1,3 +1,4 @@
+pub(crate) mod chunk_load_system;
 pub(crate) mod delta_time_system;
 pub(crate) mod direction_system;
 pub(crate) mod input_system;

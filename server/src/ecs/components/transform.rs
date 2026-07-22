@@ -57,22 +57,3 @@ pub(crate) struct Velocity {
 impl Component for Velocity {
     type Storage = FlaggedStorage<Self>;
 }
-
-#[derive(Default)]
-pub(crate) struct Rotation {
-    pub angle: f32,
-}
-
-impl Component for Rotation {
-    type Storage = FlaggedStorage<Self>;
-}
-
-#[derive(Default)]
-pub(crate) struct Scale {
-    pub x: f32,
-    pub y: f32,
-}
-
-impl Component for Scale {
-    type Storage = FlaggedStorage<Self>;
-}

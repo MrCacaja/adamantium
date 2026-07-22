@@ -2,24 +2,26 @@ mod common;
 mod ecs;
 mod log;
 mod networking;
+mod world;
 
 use crate::common::events::{create_input_event_channel, create_output_event_channel, Action};
 use crate::ecs::resources::delta::DeltaTime;
 use crate::ecs::resources::networking::PeerMap;
+use crate::ecs::resources::world_manager::WorldManager;
+use crate::ecs::systems::chunk_load_system::ChunkLoadSystem;
 use crate::ecs::systems::delta_time_system::DeltaTimeSystem;
 use crate::ecs::systems::direction_system::DirectionSystem;
 use crate::ecs::systems::input_system::InputSystem;
 use crate::ecs::systems::movement_system::MovementSystem;
+use crate::ecs::systems::track_system::TrackSystem;
 use crate::log::{Log, LogLevel};
 use crate::networking::accept_connection;
+use crate::world::persistence::WorldPersistence;
 use common::events::PeerType;
-use ecs::components::player_name::PlayerName;
-use ecs::components::transform::{Rotation, Scale};
-use ecs::systems::track_system::TrackSystem;
 use futures_util::lock::Mutex;
 use futures_util::SinkExt;
+use rand::random;
 use specs::prelude::*;
-use std::string::ToString;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
@@ -67,9 +69,24 @@ async fn main() {
         world.insert(input_event_receiver);
         world.insert(output_event_sender);
         world.insert(DeltaTime::default());
-        //TODO: remover esses register quando comecar a usar
-        world.register::<Rotation>();
-        world.register::<Scale>();
+
+        let persistence =
+            WorldPersistence::new("target/world.db").expect("Failed to open database");
+
+        let seed = match persistence.load_world_seed() {
+            Ok(seed) => seed,
+            Err(_) => {
+                let new_seed = random::<u64>();
+                persistence
+                    .save_world_seed(new_seed)
+                    .expect("Failed to save world seed");
+                new_seed
+            }
+        };
+
+        let world_manager = WorldManager::new(seed, persistence, 3);
+        world.insert(world_manager);
+
         let mut dispatcher = DispatcherBuilder::new()
             .with(DeltaTimeSystem::default(), "delta_time_system", &[])
             .with(InputSystem, "input_system", &[])
@@ -82,7 +99,12 @@ async fn main() {
             .with(
                 TrackSystem::default(),
                 "track_system",
-                &["direction_system"],
+                &["movement_system", "direction_system"],
+            )
+            .with(
+                ChunkLoadSystem::default(),
+                "chunk_load_system",
+                &["movement_system"],
             )
             .build();
         dispatcher.setup(&mut world);

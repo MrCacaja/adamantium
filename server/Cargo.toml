@@ -20,3 +20,5 @@ once_cell = "1.17.1"
 strum = "0.28.0"
 strum_macros = "0.28.0"
 specs = "0.20.0"
+rusqlite = { version = "0.38.0", features = ["bundled"] }
+noise = "0.9.0"
